@@ -2,7 +2,7 @@ class IOSXR < Oxidized::Model
 
   # IOS XR model #
 
-  prompt /^([\w.@:\/-]+[#>]\s?)$/
+  prompt /^(\r?[\w.@:\/-]+[#>]\s?)$/
   comment  '! '
 
   cmd :all do |cfg|
@@ -30,7 +30,7 @@ class IOSXR < Oxidized::Model
 
   cfg :telnet do
     username /^Username:/
-    password /^Password:/
+    password /^\r?Password:/
   end
 
   cfg :telnet, :ssh do

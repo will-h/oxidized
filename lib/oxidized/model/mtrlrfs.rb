@@ -1,8 +1,7 @@
-class XOS < Oxidized::Model
+class Mtrlrfs < Oxidized::Model
 
-  # Extreme Networks XOS
+  # Motorola RFS/Extreme WM
 
-  prompt /^*?[\w .-]+# $/
   comment  '# '
 
   cmd :all do |cfg|
@@ -15,19 +14,11 @@ class XOS < Oxidized::Model
     comment cfg
   end
 
-  cmd 'show diagnostics' do |cfg|
-    comment cfg
-  end
-
   cmd 'show licenses' do |cfg|
     comment cfg
   end
 
-  cmd 'show switch'do |cfg|
-    comment cfg.each_line.reject { |line| line.match /Time:/ or line.match /boot/i }.join
-  end
-
-  cmd 'show configuration'
+  cmd 'show running-config'
 
   cfg :telnet do
     username /^login:/
@@ -35,7 +26,7 @@ class XOS < Oxidized::Model
   end
 
   cfg :telnet, :ssh do
-    post_login 'disable clipaging'
+    post_login 'terminal length 0'
     pre_logout do
       send "exit\n"
       send "n\n"
@@ -43,3 +34,4 @@ class XOS < Oxidized::Model
   end
 
 end
+

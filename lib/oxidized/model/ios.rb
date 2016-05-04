@@ -25,6 +25,10 @@ class IOS < Oxidized::Model
   cmd :secret do |cfg|
     cfg.gsub! /^(snmp-server community).*/, '\\1 <configuration removed>'
     cfg.gsub! /username (\S+) privilege (\d+) (\S+).*/, '<secret hidden>'
+    cfg.gsub! /^username \S+ password \d \S+/, '<secret hidden>'
+    cfg.gsub! /^enable password \d \S+/, '<secret hidden>'
+    cfg.gsub! /wpa-psk ascii \d \S+/, '<secret hidden>'
+    cfg.gsub! /^tacacs-server key \d \S+/, '<secret hidden>'
     cfg
   end
 
@@ -58,7 +62,7 @@ class IOS < Oxidized::Model
     if vars :enable
       post_login do
         send "enable\n"
-        send vars(:enable) + "\n"
+        cmd vars(:enable)
       end
     end
     pre_logout 'exit'

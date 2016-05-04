@@ -23,6 +23,7 @@ class IronWare < Oxidized::Model
 
   cmd 'show version' do |cfg|
     cfg.gsub! /(^((.*)[Ss]ystem uptime(.*))$)/, '' #remove unwanted line system uptime
+    cfg.gsub! /(^((.*)[Tt]he system started at(.*))$)/, ''
     cfg.gsub! /[Uu]p\s?[Tt]ime is .*/,''
 
     comment cfg
@@ -31,8 +32,8 @@ class IronWare < Oxidized::Model
   cmd 'show chassis' do |cfg|
     cfg.encode!("UTF-8", :invalid => :replace) #sometimes ironware returns broken encoding
     cfg.gsub! /(^((.*)Current temp(.*))$)/, '' #remove unwanted lines current temperature
-    cfg.gsub! /Speed = [A-Z]{3} \(\d{2}\%\)/, '' #remove unwanted lines Speed Fans
-    cfg.gsub! /current speed is [A-Z]{3} \(\d{2}\%\)/, ''
+    cfg.gsub! /Speed = [A-Z-]{2,6} \(\d{2,3}\%\)/, '' #remove unwanted lines Speed Fans
+    cfg.gsub! /current speed is [A-Z]{2,6} \(\d{2,3}\%\)/, ''
     cfg.gsub! /\d{2}\.\d deg-C/, 'XX.X deg-C'
     if cfg.include? "TEMPERATURE"
       sc = StringScanner.new cfg

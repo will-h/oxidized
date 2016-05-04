@@ -19,13 +19,6 @@ task :test do
   end
 end
 
-desc 'Build gem'
-task :build do
-  system "gem build #{gemspec.name}.gemspec"
-  FileUtils.mkdir_p 'gems'
-  FileUtils.mv file, 'gems'
-end
-
 desc 'Install gem'
 task :install => :build do
   system "sudo -Es sh -c \'umask 022; gem install gems/#{file}\'"
@@ -33,7 +26,7 @@ end
 
 desc 'Remove gems'
 task :clean do
-  FileUtils.rm_rf 'gems'
+  FileUtils.rm_rf 'pkg'
 end
 
 desc 'Tag the release'
@@ -43,7 +36,7 @@ end
 
 desc 'Push to rubygems'
 task :push => :tag do
-  system "gem push gems/#{file}"
+  system "gem push pkg/#{file}"
 end
 
 task default: :test

@@ -1,3 +1,49 @@
+# 0 14.0
+- FEATURE: support supermicro swithes (by @funzoneq)
+
+# 0.13.1
+- BUGFIX: file permissions (Sigh...)
+
+# 0.13.0
+- FEATURE: http post for configs (by @jgroom33)
+- FEATURE: support ericsson redbacks (by @roedie)
+- FEATURE: support motorola wireless controllers (by @roadie)
+- FEATURE: support citrix netscaler (by @roadie)
+- FEATURE: support datacom devices (by @danilopopeye)
+- FEATURE: support netonix devices
+- FEATURE: support specifying ssh cipher and kex (by @roadie)
+- FEATURE: rename proxy to ssh_proxy (by @roadie)
+- FEATURE: support ssh keys on ssh_proxy (by @awix)
+- BUGFIX: various (by @danilopopeye)
+- BUGFIX: Node#repo with groups (by @danilopopeye)
+- BUGFIX: githubrepohoook (by @danilopopeye)
+- BUGFIX: fortios, airos, junos, xos, edgeswitch, nos, tmos, procurve, ipos models
+
+# 0.12.2
+- BUGFIX: more MRV model fixes (by @natm)
+
+# 0.12.1
+- BUGFIX: set term to vty100
+- BUGFIX: MRV model fixes (by @natm)
+
+# 0.12.0
+- FEATURE: enhance AOSW (by @mikebryant)
+- FEATURE: F5 TMOS support (by @mikebryant)
+- FEATURE: Opengear support (by @mikebryant)
+- FEATURE: EdgeSwitch support (by @doogieconsulting)
+- BUGFIX: rename input debug log files
+- BUGFIX: powerconnect model fixes (by @Madpilot0)
+- BUGFIX: fortigate model fixes (by @ElvinEfendi)
+- BUGFIX: various (by @mikebryant)
+- BUGFIX: write SSH debug to file without buffering
+- BUGFIX: fix IOS XR prompt handling
+
+# 0.11.0
+- FEATURE: ssh proxycommand (by @ElvinEfendi)
+- FEATURE: basic auth in HTTP source (by @laf)
+- BUGFIX: do not inject string to output before model gets it
+- BUGFIX: store pidfile in oxidized root
+
 # 0.10.0
 - FEATURE: Various refactoring (by @ElvinEfendi)
 - FEATURE: Ciena SOAS support (by @jgroom33)

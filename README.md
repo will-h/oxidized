@@ -7,8 +7,8 @@ Oxidized is a network device configuration backup tool. It's a RANCID replacemen
 * automatically adds/removes threads to meet configured retrieval interval
 * restful API to move node immediately to head-of-queue (GET/POST /node/next/[NODE])
   * syslog udp+file example to catch config change event (ios/junos) and trigger config fetch
-  * will signal ios/junos user who made change, which output module can (git does) use (via POST)
-  * 'git blame' will show for each line who and when the change was made
+  * will signal ios/junos user who made change, which output modules can use (via POST)
+  * The git output module uses this info - 'git blame' will for each line show who made the change and when
 * restful API to reload list of nodes (GET /reload)
 * restful API to fetch configurations (/node/fetch/[NODE] or /node/fetch/group/[NODE])
 * restful API to show list of nodes (GET /nodes)
@@ -31,6 +31,7 @@ Oxidized is a network device configuration backup tool. It's a RANCID replacemen
     * [Source: SQLite](#source-sqlite)
     * [Source: HTTP](#source-http)
     * [Output: GIT](#output-git)
+    * [Output: HTTP](#output-http)
     * [Output: File](#output-file)
     * [Output types](#output-types)
     * [Advanced Configuration](#advanced-configuration)
@@ -45,11 +46,11 @@ Oxidized is a network device configuration backup tool. It's a RANCID replacemen
  * A10 Networks
    * ACOS
  * Alcatel-Lucent
-   * ISAM
    * AOS
    * AOS7
-   * Wireless
+   * ISAM
    * TiMOS
+   * Wireless
  * Arista
    * EOS
  * Arris
@@ -70,17 +71,25 @@ Oxidized is a network device configuration backup tool. It's a RANCID replacemen
    * IOSXR
    * NXOS
    * SMB (Nikola series)
+ * Citrix
+   * NetScaler (Virtual Applicance)
  * Cumulus
    * Linux
+ * DataCom
+   * DmSwitch 3000
  * DELL
    * PowerConnect
    * AOSW
+ * Ericsson/Redback
+   * IPOS (former SEOS)
  * Extreme Networks
    * XOS
- * Force10
-   * FTOS
+   * WM
+ * F5
+   * TMOS
  * Force10
    * DNOS
+   * FTOS
  * FortiGate
    * FortiOS
  * HP
@@ -93,13 +102,22 @@ Oxidized is a network device configuration backup tool. It's a RANCID replacemen
    * ScreenOS (Netscreen)
  * Mikrotik
    * RouterOS
+ * Motorola
+   * RFS
  * MRV
    * MasterOS
+ * Netonix
+   * WISP Switch (As Netonix)
+ * Opengear
+   * Opengear
+ * Palo Alto
+   * PANOS
+ * Supermicro
+   * Supermicro
  * Ubiquiti
    * AirOS
    * Edgeos
- * Palo Alto
-   * PANOS
+   * EdgeSwitch
  * Zyxel
    * ZyNOS
 
@@ -109,7 +127,7 @@ Oxidized is a network device configuration backup tool. It's a RANCID replacemen
 Install all required packages and gems.
 
 ```shell
-apt-get install ruby ruby-dev libsqlite3-dev libssl-dev pkg-config cmake
+apt-get install ruby ruby-dev libsqlite3-dev libssl-dev pkg-config cmake libssh2-1-dev
 gem install oxidized
 gem install oxidized-script oxidized-web # if you don't install oxidized-web, make sure you remove "rest" from your config
 ```
@@ -117,7 +135,7 @@ gem install oxidized-script oxidized-web # if you don't install oxidized-web, ma
 ## CentOS, Oracle Linux, Red Hat Linux version 6
 Install Ruby 1.9.3 or greater (for Ruby 2.1.2 installation instructions see "Installing Ruby 2.1.2 using RVM"), then install Oxidized dependencies
 ```shell
-yum install cmake sqlite-devel openssl-devel
+yum install cmake sqlite-devel openssl-devel libssh2-devel
 ```
 
 Now lets install oxidized via Rubygems:
@@ -132,6 +150,21 @@ Oxidized configuration is in YAML format. Configuration files are subsequently s
 
 To initialize a default configuration in your home directory ```~/.config/oxidized/config```, simply run ```oxidized``` once. If you don't further configure anything from the output and source sections, it'll extend the examples on a subsequent ```oxidized``` execution. This is useful to see what options for a specific source or output backend are available.
 
+You can set the env variable `OXIDIZED_HOME` to change its home directory.
+
+```
+OXIDIZED_HOME=/etc/oxidized
+
+$ tree -L 1 /etc/oxidized
+/etc/oxidized/
+├── config
+├── log-router-ssh
+├── log-router-telnet
+├── pid
+├── router.db
+└── repository.git
+```
+
 ## Source
 
 Oxidized supports ```CSV```, ```SQLite``` and ```HTTP``` as source backends. The CSV backend reads nodes from a rancid compatible router.db file. The SQLite backend will fire queries against a database and map certain fields to model items. The HTTP backend will fire queries against a http/https url. Take a look at the [Cookbook](#cookbook) for more details.
@@ -144,7 +177,7 @@ Maps define how to map a model's fields to model [model fields](https://github.c
 
 First create the directory where the CSV ```output``` is going to store device configs and start Oxidized once.
 ```
-mkdir ~/.config/oxidized/configs
+mkdir -p ~/.config/oxidized/configs
 oxidized
 ```
 
@@ -177,7 +210,7 @@ Install Ruby 2.1.2 build dependencies
 ```
 yum install curl gcc-c++ patch readline readline-devel zlib zlib-devel
 yum install libyaml-devel libffi-devel openssl-devel make cmake
-yum install bzip2 autoconf automake libtool bison iconv-devel
+yum install bzip2 autoconf automake libtool bison iconv-devel libssh2-devel
 ```
 
 Install RVM
@@ -218,7 +251,7 @@ rvm use --default 2.1.2
 ```
 6. run container again:
 ```
-    root@bla:~# docker run -v /etc/oxidized:/root/.config/oxidized -p 8888:8888/tcp -t oxidized/oxidized:latest oxidized
+    root@bla:~# docker run -v /etc/oxidized:/root/.config/oxidized -p 8888:8888/tcp -t oxidized/oxidized:latest
     oxidized[1]: Oxidized starting, running as pid 1
     oxidized[1]: Loaded 1 nodes
     Puma 2.13.4 starting...
@@ -228,6 +261,11 @@ rvm use --default 2.1.2
     ^C
 
     root@bla:~#
+```
+
+If you want to have the config automatically reloaded (e.g. when using a http source that changes)
+```
+    root@bla:~# docker run -v /etc/oxidized:/root/.config/oxidized -p 8888:8888/tcp -e CONFIG_RELOAD_INTERVAL=3600 -t oxidized/oxidized:latest
 ```
 
 ## Cookbook
@@ -272,6 +310,21 @@ source:
       enable: 4
 ```
 
+### SSH Proxy Command
+
+Oxidized can `ssh` through a proxy as well. To do so we just need to set `ssh_proxy` variable.
+
+```
+...
+map:
+  name: 0
+  model: 1
+vars_map:
+  enable: 2
+  ssh_proxy: 3
+...
+```
+
 ### Source: SQLite
 
 One row per device, filtered by hostname.
@@ -295,6 +348,8 @@ source:
 ### Source: HTTP
 
 One object per device.
+
+HTTP Supports basic auth, configure the user and pass you want to use under the http: section.
 
 ```
 source:
@@ -326,13 +381,69 @@ output:
 
 ### Output: Git
 
-```
+This uses the rugged/libgit2 interface. So you should remember that normal Git hooks will not be executed.
+
+
+For a single repositories for all devices:
+
+``` yaml
 output:
   default: git
   git:
     user: Oxidized
     email: o@example.com
     repo: "/var/lib/oxidized/devices.git"
+```
+
+And for groups repositories:
+
+``` yaml
+output:
+  default: git
+  git:
+    user: Oxidized
+    email: o@example.com
+    repo: "/var/lib/oxidized/git-repos/default.git"
+```
+
+Oxidized will create a repository for each group in the same directory as the `default.git`. For
+example:
+
+``` csv
+host1:ios:first
+host2:nxos:second
+```
+
+This will generate the following repositories:
+
+``` bash
+$ ls /var/lib/oxidized/git-repos
+
+default.git first.git second.git
+```
+
+If you would like to use groups and a single repository, you can force this with the `single_repo` config.
+
+``` yaml
+output:
+  default: git
+  git:
+    single_repo: true
+    repo: "/var/lib/oxidized/devices.git"
+
+```
+
+### Output: Http
+
+POST a config to the specified URL
+
+```
+output:
+  default: http
+  http:
+    user: admin
+    password: changeit
+    url: "http://192.168.162.50:8080/db/coll"
 ```
 
 ### Output types
@@ -455,7 +566,7 @@ Following configuration keys need to be defined for all hooks:
 ### Events
   * `node_success`: triggered when configuration is succesfully pulled from a node and right before storing the configuration.
   * `node_fail`: triggered after `retries` amount of failed node pulls.
-  * `post_store`: triggered after node configuration is stored.
+  * `post_store`: triggered after node configuration is stored (this is executed only when the configuration has changed).
 
 ## Hook type: exec
 The `exec` hook type allows users to run an arbitrary shell command or a binary when triggered.
@@ -495,6 +606,42 @@ hooks:
     cmd: 'echo "Doing long running stuff for $OX_NODE_NAME" >> /tmp/ox_node_stuff.log; sleep 60'
     async: true
     timeout: 120
+```
+
+### githubrepo
+
+This hook configures the repository `remote` and _push_ the code when the specified event is triggerd. If the `username` and `password` are not provided, the `Rugged::Credentials::SshKeyFromAgent` will be used.
+
+`githubrepo` hook recognizes following configuration keys:
+
+  * `remote_repo`: the remote repository to be pushed to.
+  * `username`: username for repository auth.
+  * `password`: password for repository auth.
+  * `publickey`: publickey for repository auth.
+  * `privatekey`: privatekey for repository auth.
+
+When using groups repositories, each group must have its own `remote` in the `remote_repo` config.
+
+``` yaml
+hooks:
+  push_to_remote:
+    remote_repo:
+      routers: git@git.intranet:oxidized/routers.git
+      switches: git@git.intranet:oxidized/switches.git
+      firewalls: git@git.intranet:oxidized/firewalls.git
+```
+
+
+## Hook configuration example
+
+``` yaml
+hooks:
+  push_to_remote:
+    type: githubrepo
+    events: [post_store]
+    remote_repo: git@git.intranet:oxidized/test.git
+    username: user
+    password: pass
 ```
 
 # Ruby API

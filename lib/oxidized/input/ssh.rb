@@ -1,5 +1,6 @@
 module Oxidized
   require 'net/ssh'
+  require 'net/ssh/proxy/command'
   require 'timeout'
   require 'oxidized/input/cli'
   class SSH < Input
@@ -20,13 +21,23 @@ module Oxidized
       @output     = ''
       @node.model.cfg['ssh'].each { |cb| instance_exec(&cb) }
       secure = Oxidized.config.input.ssh.secure
-      @log = File.open(Oxidized::Config::Crash + "-#{@node.ip}-ssh", 'w') if Oxidized.config.input.debug?
+      @log = File.open(Oxidized::Config::Log + "-#{@node.ip}-ssh", 'w') if Oxidized.config.input.debug?
       port = vars(:ssh_port) || 22
-      @ssh = Net::SSH.start @node.ip, @node.auth[:username], :port => port.to_i,
-                            :password => @node.auth[:password], :timeout => Oxidized.config.timeout,
-                            :paranoid => secure,
-                            :auth_methods => %w(none publickey password keyboard-interactive),
-                            :number_of_password_prompts => 0
+      if proxy_host = vars(:ssh_proxy)
+        proxy =  Net::SSH::Proxy::Command.new("ssh #{proxy_host} -W %h:%p")
+      end
+      ssh_opts = {
+        :port => port.to_i,
+        :password => @node.auth[:password], :timeout => Oxidized.config.timeout,
+        :paranoid => secure,
+        :auth_methods => %w(none publickey password keyboard-interactive),
+        :number_of_password_prompts => 0,
+        :proxy => proxy
+      }
+      ssh_opts[:kex] = vars(:ssh_kex).split(/,\s*/) if vars(:ssh_kex)
+      ssh_opts[:encryption] = vars(:ssh_encryption).split(/,\s*/) if vars(:ssh_encryption)
+
+      @ssh = Net::SSH.start(@node.ip, @node.auth[:username], ssh_opts)
       unless @exec
         shell_open @ssh
         begin
@@ -74,11 +85,14 @@ module Oxidized
     def shell_open ssh
       @ses = ssh.open_channel do |ch|
         ch.on_data do |_ch, data|
-          @log.print data if Oxidized.config.input.debug?
+          if Oxidized.config.input.debug?
+            @log.print data
+            @log.fsync
+          end
           @output << data
           @output = @node.model.expects @output
         end
-        ch.request_pty do |_ch, success_pty|
+        ch.request_pty (_opts={:term=>'vt100'}) do |_ch, success_pty|
           raise NoShell, "Can't get PTY" unless success_pty
           ch.send_channel_request 'shell' do |_ch, success_shell|
             raise NoShell, "Can't get shell" unless success_shell
